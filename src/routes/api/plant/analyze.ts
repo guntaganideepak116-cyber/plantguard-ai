@@ -1,0 +1,113 @@
+import { createFileRoute } from "@tanstack/react-router";
+
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+const ALLOWED_TYPES = new Set(["image/jpeg", "image/png"]);
+
+type PlantNetResult = { name?: unknown; score?: unknown };
+type PlantNetPayload = {
+  results?: unknown;
+  version?: unknown;
+  remainingIdentificationRequests?: unknown;
+};
+
+function jsonError(message: string, status: number, details?: string) {
+  return Response.json({ error: true, message, details }, { status });
+}
+
+export const Route = createFileRoute("/api/plant/analyze")({
+  server: {
+    handlers: {
+      POST: async ({ request }) => {
+        const apiKey = process.env["PLANTNET_API_KEY"];
+        if (!apiKey) {
+          return jsonError(
+            "The AI service is not configured yet. Add a Pl@ntNet API key to the backend environment.",
+            503,
+          );
+        }
+
+        let formData: FormData;
+        try {
+          formData = await request.formData();
+        } catch {
+          return jsonError("Please upload a valid plant image.", 400);
+        }
+
+        const image = formData.get("image");
+        if (!(image instanceof File)) {
+          return jsonError("Please upload a valid plant image.", 400);
+        }
+        if (!ALLOWED_TYPES.has(image.type)) {
+          return jsonError("Only JPEG and PNG images are supported.", 400);
+        }
+        if (image.size > MAX_IMAGE_BYTES) {
+          return jsonError("Image is too large. Please try again with a smaller photo.", 413);
+        }
+
+        const providerForm = new FormData();
+        providerForm.append("images", image, image.name || "plant-scan.jpg");
+        providerForm.append("organs", String(formData.get("organ") || "leaf"));
+
+        let providerResponse: Response;
+        try {
+          providerResponse = await fetch(
+            `https://my-api.plantnet.org/v2/diseases/identify?lang=en&nb-results=5&api-key=${encodeURIComponent(apiKey)}`,
+            { method: "POST", body: providerForm },
+          );
+        } catch {
+          return jsonError("The AI service is temporarily unavailable. Please try again.", 502);
+        }
+
+        if (providerResponse.status === 401 || providerResponse.status === 403) {
+          return jsonError("The AI service key was rejected. Check the backend configuration.", 502);
+        }
+        if (providerResponse.status === 429) {
+          return jsonError("AI service limit reached. Please try again later.", 429);
+        }
+        if (!providerResponse.ok) {
+          return jsonError("The AI service could not process this image. Please try again.", 502);
+        }
+
+        let payload: PlantNetPayload;
+        try {
+          payload = (await providerResponse.json()) as PlantNetPayload;
+        } catch {
+          return jsonError("We couldn't interpret the AI response. Please try another image.", 502);
+        }
+
+        const results = Array.isArray(payload.results)
+          ? payload.results.filter(
+              (item): item is PlantNetResult =>
+                typeof item === "object" && item !== null,
+            )
+          : [];
+        const validResults = results.filter(
+          (item) => typeof item.name === "string" && typeof item.score === "number",
+        ) as Array<{ name: string; score: number }>;
+        const [topResult, ...alternatives] = validResults;
+
+        if (!topResult) {
+          return jsonError(
+            "Unable to make a reliable diagnosis. Try a clear, well-lit image of the affected leaf.",
+            422,
+          );
+        }
+
+        return Response.json({
+          success: true,
+          diagnosis: { name: topResult.name, confidence: topResult.score },
+          alternatives: alternatives.map((item) => ({
+            name: item.name,
+            confidence: item.score,
+          })),
+          source: "plantnet",
+          engineVersion: typeof payload.version === "string" ? payload.version : undefined,
+          remainingRequests:
+            typeof payload.remainingIdentificationRequests === "number"
+              ? payload.remainingIdentificationRequests
+              : undefined,
+        });
+      },
+    },
+  },
+});
