@@ -3,9 +3,7 @@ import {
   Camera,
   Check,
   CircleHelp,
-  Clock3,
   History,
-  ImagePlus,
   Info,
   Leaf,
   LoaderCircle,
@@ -15,10 +13,9 @@ import {
   ShieldCheck,
   Sprout,
   Upload,
-  Wifi,
   WifiOff,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type RefObject } from "react";
 
 import { analyzePlantImage, type PlantAnalysis } from "../lib/plant-api";
 
@@ -106,7 +103,7 @@ function Index() {
     setView("scan");
   }
 
-  async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
@@ -224,8 +221,8 @@ type ScanViewProps = {
   analysis: PlantAnalysis | null;
   error: string | null;
   isAnalyzing: boolean;
-  fileInputRef: React.RefObject<HTMLInputElement | null>;
-  onFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  fileInputRef: RefObject<HTMLInputElement | null>;
+  onFileChange: (event: ChangeEvent<HTMLInputElement>) => void;
   onAnalyze: () => void;
   onReset: () => void;
   onOpenFile: () => void;
