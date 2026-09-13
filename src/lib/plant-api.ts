@@ -1,12 +1,13 @@
 export type PlantAlternative = {
   name: string;
   confidence: number;
+  description?: string;
 };
 
 export type PlantAnalysis = {
   success: true;
   plant?: { name: string };
-  diagnosis?: { name: string; confidence: number };
+  diagnosis?: { name: string; confidence: number; description?: string };
   alternatives: PlantAlternative[];
   source: "plantnet";
   engineVersion?: string;
