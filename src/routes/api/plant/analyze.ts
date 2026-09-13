@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png"]);
 
-type PlantNetResult = { name?: unknown; score?: unknown };
+type PlantNetResult = { name?: unknown; score?: unknown; description?: unknown };
 type PlantNetPayload = {
   results?: unknown;
   version?: unknown;
@@ -52,9 +52,12 @@ export const Route = createFileRoute("/api/plant/analyze")({
         try {
           providerResponse = await fetch(
             `https://my-api.plantnet.org/v2/diseases/identify?lang=en&nb-results=5&api-key=${encodeURIComponent(apiKey)}`,
-            { method: "POST", body: providerForm },
+            { method: "POST", body: providerForm, signal: AbortSignal.timeout(30_000) },
           );
-        } catch {
+        } catch (error) {
+          if (error instanceof DOMException && error.name === "TimeoutError") {
+            return jsonError("The AI service took too long to respond. Please try again.", 504);
+          }
           return jsonError("The AI service is temporarily unavailable. Please try again.", 502);
         }
 
@@ -83,7 +86,7 @@ export const Route = createFileRoute("/api/plant/analyze")({
           : [];
         const validResults = results.filter(
           (item) => typeof item.name === "string" && typeof item.score === "number",
-        ) as Array<{ name: string; score: number }>;
+        ) as Array<{ name: string; score: number; description?: unknown }>;
         const [topResult, ...alternatives] = validResults;
 
         if (!topResult) {
@@ -95,10 +98,16 @@ export const Route = createFileRoute("/api/plant/analyze")({
 
         return Response.json({
           success: true,
-          diagnosis: { name: topResult.name, confidence: topResult.score },
+          diagnosis: {
+            name: topResult.name,
+            confidence: topResult.score,
+            description:
+              typeof topResult.description === "string" ? topResult.description : undefined,
+          },
           alternatives: alternatives.map((item) => ({
             name: item.name,
             confidence: item.score,
+            description: typeof item.description === "string" ? item.description : undefined,
           })),
           source: "plantnet",
           engineVersion: typeof payload.version === "string" ? payload.version : undefined,

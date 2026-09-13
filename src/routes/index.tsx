@@ -3,6 +3,7 @@ import {
   Camera,
   Check,
   CircleHelp,
+  ClipboardList,
   History,
   Info,
   Leaf,
@@ -10,8 +11,10 @@ import {
   LockKeyhole,
   RotateCcw,
   ScanLine,
+  ShieldAlert,
   ShieldCheck,
   Sprout,
+  Stethoscope,
   Upload,
   WifiOff,
 } from "lucide-react";
@@ -256,7 +259,19 @@ function ScanView({ imagePreview, analysis, error, isAnalyzing, fileInputRef, on
 function ResultView({ analysis, imagePreview, onReset }: { analysis: PlantAnalysis; imagePreview: string; onReset: () => void }) {
   const diagnosis = analysis.diagnosis?.name ?? analysis.plant?.name ?? "Plant identified";
   const confidence = analysis.diagnosis?.confidence ?? 0;
-  return <div className="result-view"><img className="result-image" src={imagePreview} alt="Analysed plant leaf" /><div className="result-intro"><span className="result-kicker">Analysis complete</span><h2 className="result-name">{diagnosis}</h2></div><div className="result-card"><h3>Confidence</h3><div className="confidence-row"><span className="confidence-score">{Math.round(confidence * 100)}%</span><span className="confidence-state">{confidence >= .75 ? "Strong match" : confidence >= .45 ? "Possible match" : "Low confidence"}</span></div><div className="confidence-track"><div className="confidence-fill" style={{ width: `${Math.min(100, Math.max(0, confidence * 100))}%` }} /></div></div>{analysis.alternatives.length > 0 && <div className="plain-card"><h2>Other possibilities</h2><div className="alternative-list">{analysis.alternatives.slice(0, 4).map((item) => <div className="alternative-item" key={item.name}><span>{item.name}</span><span>{Math.round(item.confidence * 100)}%</span></div>)}</div></div>}<p className="disclaimer result-disclaimer"><strong>Next step:</strong> Compare this result with the leaf and seek expert advice before treating a valuable crop.</p><button className="secondary-button full-button" onClick={onReset}><RotateCcw size={17} /> Scan another leaf</button></div>;
+  const predictions = [
+    ...(analysis.diagnosis ? [analysis.diagnosis] : []),
+    ...analysis.alternatives.slice(0, 4),
+  ];
+  return <div className="result-view"><img className="result-image" src={imagePreview} alt="Analysed plant leaf" /><div className="result-intro"><span className="result-kicker">Analysis complete</span><h2 className="result-name">{diagnosis}</h2></div><div className="result-card"><h3>Confidence</h3><div className="confidence-row"><span className="confidence-score">{Math.round(confidence * 100)}%</span><span className="confidence-state">{confidence >= .75 ? "Strong match" : confidence >= .45 ? "Possible match" : "Low confidence"}</span></div><div className="confidence-track"><div className="confidence-fill" style={{ width: `${Math.min(100, Math.max(0, confidence * 100))}%` }} /></div></div><GuidancePanel predictions={predictions} />{analysis.alternatives.length > 0 && <div className="plain-card"><h2>Other possibilities</h2><div className="alternative-list">{analysis.alternatives.slice(0, 4).map((item) => <div className="alternative-item" key={item.name}><span>{item.name}</span><span>{Math.round(item.confidence * 100)}%</span></div>)}</div></div>}<p className="disclaimer result-disclaimer"><strong>Next step:</strong> Compare this result with the leaf and seek expert advice before treating a valuable crop.</p><button className="secondary-button full-button" onClick={onReset}><RotateCcw size={17} /> Scan another leaf</button></div>;
+}
+
+function GuidancePanel({ predictions }: { predictions: Array<{ name: string; confidence: number; description?: string }> }) {
+  return <section className="guidance-section" aria-labelledby="guidance-title"><div className="guidance-heading"><div><span className="result-kicker">Provider details</span><h2 id="guidance-title">What this result tells you</h2></div><ClipboardList size={20} /></div><div className="prediction-list">{predictions.map((prediction, index) => <article className="prediction-item" key={`${prediction.name}-${index}`}><div className="prediction-title"><span><strong>{prediction.name}</strong><span>{index === 0 ? "Top prediction" : "Alternative prediction"}</span></span><b>{Math.round(prediction.confidence * 100)}%</b></div>{prediction.description && <p className="provider-description">{prediction.description}</p>}</article>)}</div><div className="guidance-grid"><GuidanceNote icon={<ShieldAlert size={17} />} title="Symptoms" /><GuidanceNote icon={<ShieldCheck size={17} />} title="Prevention" /><GuidanceNote icon={<Stethoscope size={17} />} title="Treatment" /></div><p className="guidance-source">Pl@ntNet supplies the prediction name, confidence, and short label above. Its response does not include detailed symptoms, prevention, or treatment instructions, so confirm the diagnosis with a horticulturist before taking action.</p></section>;
+}
+
+function GuidanceNote({ icon, title }: { icon: React.ReactNode; title: string }) {
+  return <div className="guidance-note"><span className="guidance-icon">{icon}</span><div><h3>{title}</h3><p>Not provided by Pl@ntNet for this prediction.</p></div></div>;
 }
 
 function HistoryView({ history }: { history: HistoryItem[] }) {

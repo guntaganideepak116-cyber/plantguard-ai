@@ -250,6 +250,22 @@
   .plain-card { margin-top: .8rem; padding: 1rem; border: 1px solid var(--border); border-radius: 1rem; background: var(--card); }
   .plain-card h2 { margin: 0; font-size: 1rem; }
   .plain-card p { margin: .5rem 0 0; color: var(--muted-foreground); font-size: .8rem; line-height: 1.55; }
+  .guidance-section { margin-top: .8rem; padding: 1rem; border: 1px solid var(--border); border-radius: 1rem; background: var(--card); }
+  .guidance-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; color: var(--primary); }
+  .guidance-heading h2 { margin: .25rem 0 0; color: var(--foreground); font-size: 1.05rem; }
+  .prediction-list { display: grid; gap: .65rem; margin-top: .9rem; }
+  .prediction-item { padding: .75rem; border-radius: .75rem; background: var(--surface-soft); }
+  .prediction-title { display: flex; align-items: baseline; justify-content: space-between; gap: .8rem; }
+  .prediction-title strong { display: block; font-size: .82rem; overflow-wrap: anywhere; }
+  .prediction-title span span { display: block; margin-top: .2rem; color: var(--muted-foreground); font-size: .68rem; }
+  .prediction-title b { flex: 0 0 auto; color: var(--primary); font-size: .8rem; }
+  .provider-description { margin: .55rem 0 0; color: var(--ink-soft); font-size: .77rem; line-height: 1.45; }
+  .guidance-grid { display: grid; gap: .55rem; margin-top: .9rem; }
+  .guidance-note { display: grid; grid-template-columns: 2rem 1fr; gap: .65rem; align-items: start; padding: .7rem; border: 1px solid var(--border); border-radius: .7rem; }
+  .guidance-icon { display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: .6rem; color: var(--primary); background: var(--surface-soft); }
+  .guidance-note h3 { margin: .1rem 0 0; font-size: .8rem; }
+  .guidance-note p { margin: .2rem 0 0; color: var(--muted-foreground); font-size: .72rem; line-height: 1.4; }
+  .guidance-source { margin: .9rem 0 0; color: var(--muted-foreground); font-size: .7rem; line-height: 1.5; }
   .history-list { display: grid; gap: .7rem; margin-top: 1.2rem; }
   .history-item { display: flex; align-items: center; gap: .8rem; padding: .8rem; border: 1px solid var(--border); border-radius: .9rem; background: var(--card); }
   .history-thumb { width: 3.2rem; height: 3.2rem; flex: 0 0 auto; object-fit: cover; border-radius: .65rem; background: var(--surface-soft); }
