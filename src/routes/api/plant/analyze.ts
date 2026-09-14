@@ -107,8 +107,17 @@ export const Route = createFileRoute("/api/plant/analyze")({
         if (providerResponse.status === 429) {
           return jsonError("AI service limit reached. Please try again later.", 429);
         }
+        if (providerResponse.status === 400 || providerResponse.status === 422) {
+          return jsonError(
+            "The AI service could not find a reliable match in this image. Try a clear, well-lit photo of one affected leaf.",
+            422,
+          );
+        }
         if (!providerResponse.ok) {
-          return jsonError("The AI service could not process this image. Please try again.", 502);
+          return jsonError(
+            "The AI service is temporarily unavailable. Please try again in a moment.",
+            502,
+          );
         }
 
         let payload: PlantNetPayload;
