@@ -3,7 +3,17 @@ import { createFileRoute } from "@tanstack/react-router";
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png"]);
 
-type PlantNetResult = { name?: unknown; score?: unknown; description?: unknown };
+type PlantNetSpecies = {
+  scientificName?: unknown;
+  commonNames?: unknown;
+  eppoCode?: unknown;
+};
+type PlantNetResult = {
+  name?: unknown;
+  score?: unknown;
+  description?: unknown;
+  species?: unknown;
+};
 type PlantNetPayload = {
   results?: unknown;
   version?: unknown;
@@ -12,6 +22,33 @@ type PlantNetPayload = {
 
 function jsonError(message: string, status: number, details?: string) {
   return Response.json({ error: true, message, details }, { status });
+}
+
+function getResultName(result: PlantNetResult) {
+  if (typeof result.name === "string" && result.name.trim()) return result.name;
+
+  if (typeof result.species !== "object" || result.species === null) return null;
+  const species = result.species as PlantNetSpecies;
+  if (typeof species.scientificName === "string" && species.scientificName.trim()) {
+    return species.scientificName;
+  }
+  if (Array.isArray(species.commonNames)) {
+    const commonName = species.commonNames.find(
+      (name): name is string => typeof name === "string" && name.trim().length > 0,
+    );
+    if (commonName) return commonName;
+  }
+  if (typeof species.eppoCode === "string" && species.eppoCode.trim()) {
+    return species.eppoCode;
+  }
+
+  return null;
+}
+
+function getResultDescription(result: PlantNetResult) {
+  return typeof result.description === "string" && result.description.trim()
+    ? result.description
+    : undefined;
 }
 
 export const Route = createFileRoute("/api/plant/analyze")({
@@ -62,13 +99,29 @@ export const Route = createFileRoute("/api/plant/analyze")({
         }
 
         if (providerResponse.status === 401 || providerResponse.status === 403) {
-          return jsonError("The AI service key was rejected. Check the backend configuration.", 502);
+          return jsonError(
+            "The AI service key was rejected. Check the backend configuration.",
+            502,
+          );
         }
         if (providerResponse.status === 429) {
           return jsonError("AI service limit reached. Please try again later.", 429);
         }
+        if (
+          providerResponse.status === 400 ||
+          providerResponse.status === 404 ||
+          providerResponse.status === 422
+        ) {
+          return jsonError(
+            "The AI service could not find a reliable match in this image. Try a clear, well-lit photo of one affected leaf.",
+            422,
+          );
+        }
         if (!providerResponse.ok) {
-          return jsonError("The AI service could not process this image. Please try again.", 502);
+          return jsonError(
+            "The AI service is temporarily unavailable. Please try again in a moment.",
+            502,
+          );
         }
 
         let payload: PlantNetPayload;
@@ -80,13 +133,14 @@ export const Route = createFileRoute("/api/plant/analyze")({
 
         const results = Array.isArray(payload.results)
           ? payload.results.filter(
-              (item): item is PlantNetResult =>
-                typeof item === "object" && item !== null,
+              (item): item is PlantNetResult => typeof item === "object" && item !== null,
             )
           : [];
-        const validResults = results.filter(
-          (item) => typeof item.name === "string" && typeof item.score === "number",
-        ) as Array<{ name: string; score: number; description?: unknown }>;
+        const validResults = results.flatMap((item) => {
+          const name = getResultName(item);
+          if (!name || typeof item.score !== "number" || !Number.isFinite(item.score)) return [];
+          return [{ name, score: item.score, description: getResultDescription(item) }];
+        });
         const [topResult, ...alternatives] = validResults;
 
         if (!topResult) {
