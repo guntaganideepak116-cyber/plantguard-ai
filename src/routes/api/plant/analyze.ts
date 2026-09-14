@@ -99,7 +99,10 @@ export const Route = createFileRoute("/api/plant/analyze")({
         }
 
         if (providerResponse.status === 401 || providerResponse.status === 403) {
-          return jsonError("The AI service key was rejected. Check the backend configuration.", 502);
+          return jsonError(
+            "The AI service key was rejected. Check the backend configuration.",
+            502,
+          );
         }
         if (providerResponse.status === 429) {
           return jsonError("AI service limit reached. Please try again later.", 429);
@@ -117,8 +120,7 @@ export const Route = createFileRoute("/api/plant/analyze")({
 
         const results = Array.isArray(payload.results)
           ? payload.results.filter(
-              (item): item is PlantNetResult =>
-                typeof item === "object" && item !== null,
+              (item): item is PlantNetResult => typeof item === "object" && item !== null,
             )
           : [];
         const validResults = results.flatMap((item) => {
